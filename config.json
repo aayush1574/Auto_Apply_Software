@@ -1,0 +1,39 @@
+{
+  "user_name": "Your Name",
+  "email": "your.email@example.com",
+  "phone": "+1234567890",
+  "linkedin_username": "",
+  "linkedin_password": "",
+  "target_roles": [
+    "Software Engineer",
+    "Developer",
+    "Data Scientist"
+  ],
+  "preferred_locations": [
+    "London",
+    "Remote",
+    "New York"
+  ],
+  "experience_keywords": [
+    "Python",
+    "JavaScript",
+    "Machine Learning"
+  ],
+  "salary_range": "Competitive",
+  "experience_years": 3,
+  "visa_status": "Authorized to work",
+  "visa_sponsorship": "No",
+  "cv_path": "documents/CV.pdf",
+  "cover_letter_path": "documents/Cover_Letter.pdf",
+  "cover_letter_template": "Dear Hiring Manager,\n\nI am writing to express my interest in the {role} position at {company}. With {experience_years} years of experience in software development, I am excited about the opportunity to contribute to your team.\n\nMy background in {experience_keywords} aligns well with your requirements, and I am particularly drawn to {company}'s innovative approach to technology.\n\nI look forward to discussing how my skills can benefit your organization.\n\nBest regards,\n{name}",
+  "application_style": "Quick",
+  "tone": "Professional",
+  "max_applications_per_day": 20,
+  "screening_responses": {
+    "years_experience": "3+ years",
+    "willing_to_relocate": "Yes",
+    "salary_expectation": "Market rate",
+    "notice_period": "2 weeks",
+    "remote_work": "Yes"
+  }
+}

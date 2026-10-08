@@ -6,17 +6,21 @@ Handles CSV logging and reporting of job applications.
 import csv
 import os
 from datetime import datetime, timedelta
-from typing import Dict, List
+from pathlib import Path
+from typing import Dict
+
+BASE_DIR = Path(__file__).resolve().parent
 
 class ApplicationLogger:
-    def __init__(self, csv_file: str = "Applications.csv"):
-        self.csv_file = csv_file
+    def __init__(self, csv_file: str | os.PathLike = BASE_DIR / "Applications.csv"):
+        self.csv_file = Path(csv_file)
         self._ensure_csv_exists()
     
     def _ensure_csv_exists(self):
         """Create CSV file with headers if it doesn't exist"""
-        if not os.path.exists(self.csv_file):
-            with open(self.csv_file, 'w', newline='', encoding='utf-8') as file:
+        if not self.csv_file.exists():
+            self.csv_file.parent.mkdir(parents=True, exist_ok=True)
+            with self.csv_file.open('w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
                 writer.writerow([
                     "Date", "Job Title", "Company", "Location", 
@@ -25,7 +29,7 @@ class ApplicationLogger:
     
     def log_application(self, job: Dict, status: str = "Applied", method: str = "Easy Apply"):
         """Log a job application to CSV"""
-        with open(self.csv_file, 'a', newline='', encoding='utf-8') as file:
+        with self.csv_file.open('a', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             writer.writerow([
                 datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -41,7 +45,7 @@ class ApplicationLogger:
     
     def get_weekly_summary(self) -> Dict:
         """Generate weekly application summary"""
-        if not os.path.exists(self.csv_file):
+        if not self.csv_file.exists():
             return {"total": 0, "response_rate": 0, "follow_ups": 0}
         
         week_ago = datetime.now() - timedelta(days=7)
@@ -49,7 +53,7 @@ class ApplicationLogger:
         responses = 0
         follow_ups = 0
         
-        with open(self.csv_file, 'r', encoding='utf-8') as file:
+        with self.csv_file.open('r', encoding='utf-8', newline='') as file:
             reader = csv.DictReader(file)
             for row in reader:
                 try:
@@ -60,7 +64,7 @@ class ApplicationLogger:
                             responses += 1
                         if row["Follow-up"] == "Pending":
                             follow_ups += 1
-                except ValueError:
+                except (KeyError, ValueError):
                     continue
         
         response_rate = (responses / total_apps * 100) if total_apps > 0 else 0
@@ -75,7 +79,7 @@ class ApplicationLogger:
         """Update the status of an existing application"""
         # Read all rows
         rows = []
-        with open(self.csv_file, 'r', encoding='utf-8') as file:
+        with self.csv_file.open('r', encoding='utf-8', newline='') as file:
             reader = csv.DictReader(file)
             rows = list(reader)
         
@@ -87,8 +91,10 @@ class ApplicationLogger:
                 break
         
         # Write back to file
-        with open(self.csv_file, 'w', newline='', encoding='utf-8') as file:
-            if rows:
-                writer = csv.DictWriter(file, fieldnames=rows[0].keys())
-                writer.writeheader()
-                writer.writerows(rows)
+        if not rows:
+            return
+
+        with self.csv_file.open('w', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=rows[0].keys())
+            writer.writeheader()
+            writer.writerows(rows)

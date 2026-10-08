@@ -3,9 +3,6 @@ Core Job Application Agent
 Handles job search, filtering, application, and logging.
 """
 
-import csv
-import os
-from datetime import datetime
 from typing import Dict, List
 from job_search import LinkedInJobSearch
 from application_handler import ApplicationHandler

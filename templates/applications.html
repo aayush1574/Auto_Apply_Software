@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Applications · Job Search Assistant{% endblock %}
+{% block content %}
+<h1>Confirmed applications</h1>
+{% if applications %}
+<table><thead><tr><th>Date</th><th>Role</th><th>Company</th><th>Status</th><th>Link</th></tr></thead>
+<tbody>{% for item in applications %}<tr><td>{{ item.Date }}</td><td>{{ item['Job Title'] }}</td><td>{{ item.Company }}</td><td>{{ item.Status }}</td><td>{% if item.URL %}<a href="{{ item.URL }}" target="_blank" rel="noopener">Open</a>{% endif %}</td></tr>{% endfor %}</tbody></table>
+{% else %}<p class="muted">No confirmed applications yet.</p>{% endif %}
+{% endblock %}

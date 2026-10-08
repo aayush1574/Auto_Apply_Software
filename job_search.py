@@ -5,9 +5,8 @@ Handles job searching and filtering on LinkedIn.
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from typing import Dict, List
+from urllib.parse import urlencode
 import time
 
 class LinkedInJobSearch:
@@ -21,6 +20,7 @@ class LinkedInJobSearch:
             options = webdriver.ChromeOptions()
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
+            options.page_load_strategy = "eager"
             self.driver = webdriver.Chrome(options=options)
     
     def search_jobs(self, role: str, location: str) -> List[Dict]:
@@ -29,9 +29,9 @@ class LinkedInJobSearch:
         
         # Build LinkedIn job search URL
         base_url = "https://www.linkedin.com/jobs/search/"
-        params = f"?keywords={role}&location={location}&f_AL=true"  # f_AL=true for Easy Apply
-        
-        self.driver.get(base_url + params)
+        params = urlencode({"keywords": role, "location": location, "f_AL": "true"})
+
+        self.driver.get(f"{base_url}?{params}")
         time.sleep(3)
         
         jobs = []
@@ -59,11 +59,11 @@ class LinkedInJobSearch:
                             "url": f"https://www.linkedin.com/jobs/view/{job_id}",
                             "easy_apply": True
                         })
-                except Exception as e:
+                except Exception:
                     continue
                     
-        except Exception as e:
-            print(f"Error searching jobs: {e}")
+        except Exception as exc:
+            print(f"Error searching jobs: {exc}")
         
         return jobs
     

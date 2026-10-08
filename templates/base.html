@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Job Search Assistant{% endblock %}</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 980px; margin: 0 auto; padding: 2rem 1rem; line-height: 1.5; }
+    nav { display: flex; gap: 1rem; margin-bottom: 2rem; }
+    form, .card { border: 1px solid #8886; border-radius: .75rem; padding: 1rem; margin: 1rem 0; }
+    label { display: block; margin: .75rem 0 .25rem; font-weight: 600; }
+    input, textarea, button { box-sizing: border-box; font: inherit; padding: .6rem; }
+    input, textarea { width: 100%; }
+    button { cursor: pointer; margin-top: .75rem; }
+    .muted { color: #777; }
+    .warning { border-left: .3rem solid #d88b00; padding-left: 1rem; }
+    .jobs { display: grid; gap: .75rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: .5rem; border-bottom: 1px solid #8885; }
+  </style>
+</head>
+<body>
+  <nav><a href="{{ url_for('index') }}">Search</a><a href="{{ url_for('applications') }}">Applications</a><a href="{{ url_for('config_page') }}">Settings</a></nav>
+  {% block content %}{% endblock %}
+</body>
+</html>

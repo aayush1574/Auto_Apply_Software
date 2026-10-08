@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-LinkedIn Easy Apply Job Application Automation Agent
-Main entry point for the intelligent job application system.
+LinkedIn Easy Apply Job Search Assistant
+Command-line entry point for search and confirmed-application tracking.
 """
 
 from job_agent import JobApplicationAgent
@@ -9,7 +9,7 @@ from config import load_user_config
 
 def main():
     """Main execution function"""
-    print("🚀 LinkedIn Easy Apply Automation Agent")
+    print("🚀 LinkedIn Job Search Assistant")
     print("=" * 50)
     
     # Load user configuration

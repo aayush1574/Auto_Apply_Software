@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Settings · Job Search Assistant{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+<form method="post">
+  {% for key in ['user_name', 'email', 'phone', 'experience_years', 'salary_range', 'visa_status', 'visa_sponsorship', 'max_applications_per_day'] %}
+    <label for="{{ key }}">{{ key.replace('_', ' ').title() }}</label>
+    <input id="{{ key }}" name="{{ key }}" value="{{ config.get(key, '') }}">
+  {% endfor %}
+  <label for="cover_letter_template">Cover letter template</label>
+  <textarea id="cover_letter_template" name="cover_letter_template" rows="10">{{ config.cover_letter_template }}</textarea>
+  <button type="submit">Save settings</button>
+</form>
+<form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+  <h2>Upload résumé</h2>
+  <input type="hidden" name="type" value="cv"><input type="file" name="file" accept=".pdf,.doc,.docx" required>
+  <button type="submit">Upload</button>
+</form>
+{% endblock %}

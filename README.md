@@ -1,13 +1,13 @@
-# LinkedIn Easy Apply Automation Agent
+# LinkedIn Job Search Assistant
 
-An intelligent job application automation system that searches, prioritizes, and applies to LinkedIn Easy Apply jobs efficiently and professionally.
+A local assistant that finds LinkedIn Easy Apply listings and tracks applications that you confirm submitting. It deliberately keeps a human in the loop: the current code does **not** fill or submit LinkedIn forms.
 
 ## Features
 
 - 🔍 **Smart Job Search**: Filter jobs by role, location, and keywords
-- 🤖 **Auto-Fill Forms**: Complete Easy Apply forms automatically
-- 📝 **STAR Responses**: Answer screening questions professionally
-- 📎 **Document Upload**: Attach CV and cover letters automatically
+- 🔗 **Review Links**: Open each result on LinkedIn to review and apply
+- 📝 **Cover Letter Templates**: Prepare job-specific drafts
+- 📎 **Local Documents**: Store a résumé for your own workflow
 - 📊 **Application Tracking**: Log all applications in CSV format
 - 📈 **Weekly Reports**: Track response rates and follow-ups
 
@@ -15,7 +15,9 @@ An intelligent job application automation system that searches, prioritizes, and
 
 1. **Install Dependencies**
    ```bash
-   pip install -r requirements.txt
+   python -m venv .venv
+   .venv\Scripts\activate
+   python -m pip install -r requirements.txt
    ```
 
 2. **Run Web Interface**
@@ -36,7 +38,7 @@ An intelligent job application automation system that searches, prioritizes, and
 ## Usage Commands
 
 - `search [role] in [location]` - Find Easy Apply jobs
-- `apply [number]` - Apply to found jobs (default: 5)
+- `apply [number]` - Reports that manual review is required; it never claims a submission
 - `status` - View weekly application summary
 - `quit` - Exit the program
 
@@ -46,11 +48,8 @@ An intelligent job application automation system that searches, prioritizes, and
 > search sustainability jobs in London
 Found 15 Easy Apply jobs for 'sustainability jobs' in 'London'
 
-> apply 10
-✅ Applied: Sustainability Analyst at GreenTech Ltd
-✅ Applied: Environmental Consultant at EcoSolutions
-...
-Applied to 8 jobs, 2 failed
+Open a result on LinkedIn, submit it there, then use the web interface's
+"I applied — record it" button.
 
 > status
 📊 Weekly Summary:
@@ -71,7 +70,7 @@ Edit `config.json` to customize:
 
 ## Data Privacy
 
-- No passwords or sensitive data are stored
+- LinkedIn passwords are neither requested nor stored
 - All data remains local on your machine
 - Applications logged in `Applications.csv`
 
@@ -79,5 +78,17 @@ Edit `config.json` to customize:
 
 - Maintains accuracy and professionalism
 - Does not misrepresent experience
-- Respects LinkedIn's terms of service
+- Requires the user to review and submit every application
 - Provides human-quality responses
+
+## Current limitations
+
+- LinkedIn can change its page markup or require sign-in, which may prevent results from loading.
+- Naukri and Monster were previously shown in the UI but had no implementation; they are disabled until real provider modules exist.
+- Automatic form submission is intentionally disabled. The old placeholder returned success without submitting anything, so it was unsafe to use for application tracking.
+
+## Tests
+
+```bash
+python -m unittest discover -s tests -v
+```

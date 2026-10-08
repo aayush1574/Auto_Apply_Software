@@ -5,77 +5,68 @@ Handles user settings and configuration loading.
 
 import json
 import os
-from typing import Dict
+from pathlib import Path
+from typing import Any, Dict
 
-def load_user_config() -> Dict:
+BASE_DIR = Path(__file__).resolve().parent
+CONFIG_FILE = Path(os.environ.get("AUTO_APPLY_CONFIG", BASE_DIR / "config.json"))
+
+
+def _default_config() -> Dict[str, Any]:
+    return {
+        "user_name": "Your Name",
+        "email": "your.email@example.com",
+        "phone": "+1234567890",
+        "target_roles": ["Software Engineer", "Developer", "Data Scientist"],
+        "preferred_locations": ["London", "Remote", "New York"],
+        "experience_keywords": ["Python", "JavaScript", "Machine Learning"],
+        "salary_range": "Competitive",
+        "experience_years": 3,
+        "visa_status": "Authorized to work",
+        "visa_sponsorship": "No",
+        "cv_path": "documents/CV.pdf",
+        "cover_letter_path": "documents/Cover_Letter.pdf",
+        "cover_letter_template": (
+            "Dear Hiring Manager,\n\nI am writing to express my interest in the {role} "
+            "position at {company}. With {experience_years} years of experience, "
+            "my background in {experience_keywords} aligns with the role.\n\n"
+            "Best regards,\n{name}"
+        ),
+        "application_style": "Quick",
+        "tone": "Professional",
+        "max_applications_per_day": 20,
+        "screening_responses": {},
+    }
+
+def load_user_config() -> Dict[str, Any]:
     """Load user configuration from config.json or create default"""
-    config_file = "config.json"
-    
-    if os.path.exists(config_file):
-        with open(config_file, 'r') as f:
-            return json.load(f)
-    else:
-        # Create default configuration
-        default_config = {
-            "user_name": "Your Name",
-            "email": "your.email@example.com",
-            "phone": "+1234567890",
-            "linkedin_username": "",
-            "linkedin_password": "",
-            
-            # Job preferences
-            "target_roles": ["Software Engineer", "Developer", "Data Scientist"],
-            "preferred_locations": ["London", "Remote", "New York"],
-            "experience_keywords": ["Python", "JavaScript", "Machine Learning"],
-            "salary_range": "Competitive",
-            "experience_years": 3,
-            
-            # Work authorization
-            "visa_status": "Authorized to work",
-            "visa_sponsorship": "No",
-            
-            # Documents
-            "cv_path": "documents/CV.pdf",
-            "cover_letter_path": "documents/Cover_Letter.pdf",
-            "cover_letter_template": """Dear Hiring Manager,
+    if CONFIG_FILE.exists():
+        try:
+            with CONFIG_FILE.open("r", encoding="utf-8") as file:
+                loaded = json.load(file)
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(f"Unable to read configuration at {CONFIG_FILE}: {exc}") from exc
+        if not isinstance(loaded, dict):
+            raise ValueError("Configuration must be a JSON object")
+        return {**_default_config(), **loaded}
 
-I am writing to express my interest in the {role} position at {company}. With {experience_years} years of experience in software development, I am excited about the opportunity to contribute to your team.
+    config = _default_config()
+    save_user_config(config)
+    return config
 
-My background in {experience_keywords} aligns well with your requirements, and I am particularly drawn to {company}'s innovative approach to technology.
 
-I look forward to discussing how my skills can benefit your organization.
+def save_user_config(config: Dict[str, Any]) -> None:
+    """Atomically save configuration as UTF-8 JSON."""
+    CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    temporary = CONFIG_FILE.with_suffix(CONFIG_FILE.suffix + ".tmp")
+    with temporary.open("w", encoding="utf-8") as file:
+        json.dump(config, file, indent=2, ensure_ascii=False)
+        file.write("\n")
+    temporary.replace(CONFIG_FILE)
 
-Best regards,
-{name}""",
-            
-            # Application settings
-            "application_style": "Quick",  # Quick or Detailed
-            "tone": "Professional",  # Professional/Warm/Technical/Creative
-            "max_applications_per_day": 20,
-            
-            # Screening question responses
-            "screening_responses": {
-                "years_experience": "3+ years",
-                "willing_to_relocate": "Yes",
-                "salary_expectation": "Market rate",
-                "notice_period": "2 weeks",
-                "remote_work": "Yes"
-            }
-        }
-        
-        # Save default config
-        with open(config_file, 'w') as f:
-            json.dump(default_config, f, indent=2)
-        
-        print(f"Created default config.json - please update with your details")
-        return default_config
-
-def update_config(key: str, value: str):
+def update_config(key: str, value: Any) -> None:
     """Update a specific configuration value"""
     config = load_user_config()
     config[key] = value
     
-    with open("config.json", 'w') as f:
-        json.dump(config, f, indent=2)
-    
-    print(f"Updated {key} to {value}")
+    save_user_config(config)

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Job Search Assistant</h1>
+<p class="warning"><strong>Review required:</strong> This app finds LinkedIn Easy Apply listings. It does not submit forms automatically. Apply on LinkedIn, then record the confirmed application here.</p>
+<div class="card"><strong>{{ stats.total }}</strong> applications this week · {{ stats.response_rate }}% response rate · {{ stats.follow_ups }} pending follow-ups</div>
+<form id="search-form">
+  <label for="role">Role</label><input id="role" name="role" required placeholder="Software Engineer">
+  <label for="location">Location</label><input id="location" name="location" required placeholder="Remote">
+  <input type="hidden" name="sites" value="linkedin">
+  <button type="submit">Search LinkedIn</button>
+</form>
+<p id="message" role="status"></p>
+<div id="jobs" class="jobs"></div>
+<script>
+const form = document.querySelector('#search-form');
+const jobs = document.querySelector('#jobs');
+const message = document.querySelector('#message');
+form.addEventListener('submit', async (event) => {
+  event.preventDefault(); jobs.replaceChildren(); message.textContent = 'Searching…';
+  try {
+    const response = await fetch('{{ url_for("search_jobs") }}', {method: 'POST', body: new FormData(form)});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Search failed');
+    message.textContent = `Found ${data.total_count} jobs.`;
+    for (const job of (data.jobs.linkedin || [])) {
+      const card = document.createElement('article'); card.className = 'card';
+      const title = document.createElement('h2'); title.textContent = job.title;
+      const detail = document.createElement('p'); detail.textContent = `${job.company} · ${job.location}`;
+      const link = document.createElement('a'); link.href = job.url; link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Open on LinkedIn';
+      const record = document.createElement('button'); record.textContent = 'I applied — record it';
+      record.addEventListener('click', async () => {
+        record.disabled = true;
+        const body = new FormData(); body.set('url', job.url);
+        const result = await fetch('{{ url_for("record_application") }}', {method: 'POST', body});
+        const payload = await result.json(); message.textContent = payload.message;
+        if (!result.ok) record.disabled = false;
+      });
+      card.append(title, detail, link, document.createElement('br'), record); jobs.append(card);
+    }
+  } catch (error) { message.textContent = error.message; }
+});
+</script>
+{% endblock %}

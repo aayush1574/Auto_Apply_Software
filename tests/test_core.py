@@ -2,11 +2,11 @@ import csv
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import app as web_app
 from application_handler import ApplicationHandler
-from job_search import LinkedInJobSearch
+from job_search import LinkedInJobSearch, build_linkedin_search_url
 from logger import ApplicationLogger
 
 
@@ -28,14 +28,31 @@ class ApplicationHandlerTests(unittest.TestCase):
 
 class JobSearchTests(unittest.TestCase):
     def test_search_url_encodes_user_input(self):
-        search = LinkedInJobSearch({})
-        search.driver = Mock()
-        search.driver.find_elements.return_value = []
-        with patch("job_search.time.sleep"):
-            self.assertEqual(search.search_jobs("C++ engineer", "New York"), [])
-        url = search.driver.get.call_args.args[0]
+        url = build_linkedin_search_url("C++ engineer", "New York")
         self.assertIn("keywords=C%2B%2B+engineer", url)
         self.assertIn("location=New+York", url)
+
+    def test_parses_public_job_cards(self):
+        response = Mock()
+        response.text = """
+        <div class="base-search-card" data-entity-urn="urn:li:jobPosting:12345">
+          <a class="base-card__full-link" href="https://example.test/job"></a>
+          <h3 class="base-search-card__title"> AI Engineer </h3>
+          <h4 class="base-search-card__subtitle"> Example Inc </h4>
+          <span class="job-search-card__location"> Remote </span>
+        </div>
+        """
+        response.raise_for_status.return_value = None
+        session = Mock()
+        session.get.return_value = response
+        search = LinkedInJobSearch({}, session=session)
+
+        jobs = search.search_jobs("AI Engineer", "Remote")
+
+        self.assertEqual(jobs[0]["id"], "12345")
+        self.assertEqual(jobs[0]["title"], "AI Engineer")
+        self.assertEqual(jobs[0]["company"], "Example Inc")
+        session.get.assert_called_once()
 
 
 class LoggerTests(unittest.TestCase):
@@ -72,6 +89,14 @@ class WebTests(unittest.TestCase):
         response = self.client.post("/apply", data={"count": "1"})
         self.assertEqual(response.status_code, 501)
         self.assertFalse(response.get_json()["success"])
+
+    def test_record_rejects_non_linkedin_urls(self):
+        response = self.client.post("/applications/record", data={
+            "url": "https://example.test/jobs/view/123",
+            "title": "Engineer",
+            "company": "Example",
+        })
+        self.assertEqual(response.status_code, 400)
 
 
 if __name__ == "__main__":

@@ -9,7 +9,13 @@ from pathlib import Path
 from typing import Any, Dict
 
 BASE_DIR = Path(__file__).resolve().parent
-CONFIG_FILE = Path(os.environ.get("AUTO_APPLY_CONFIG", BASE_DIR / "config.json"))
+DATA_DIR = Path(
+    os.environ.get(
+        "AUTO_APPLY_DATA_DIR",
+        "/tmp/auto_apply" if os.environ.get("VERCEL") else BASE_DIR,
+    )
+)
+CONFIG_FILE = Path(os.environ.get("AUTO_APPLY_CONFIG", DATA_DIR / "config.json"))
 
 
 def _default_config() -> Dict[str, Any]:

@@ -3,16 +3,18 @@ Flask Web Frontend for LinkedIn Job Application Agent
 """
 
 import atexit
+from urllib.parse import urlparse
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from multi_site_agent import MultiSiteJobAgent
-from config import BASE_DIR, load_user_config, save_user_config
-from logger import ApplicationLogger, BASE_DIR as LOGGER_BASE_DIR
+from config import DATA_DIR, load_user_config, save_user_config
+from job_search import build_linkedin_search_url
+from logger import APPLICATIONS_FILE, ApplicationLogger
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = str(BASE_DIR / 'documents')
+app.config['UPLOAD_FOLDER'] = str(DATA_DIR / 'documents')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx'}
 Path(app.config['UPLOAD_FOLDER']).mkdir(parents=True, exist_ok=True)
@@ -65,12 +67,17 @@ def search_jobs():
         return jsonify({'success': False, 'message': f'Job search failed: {exc}'}), 502
     
     total_jobs = sum(len(jobs) for jobs in current_jobs.values())
+    warning = multi_agent.linkedin.last_error
+    if not warning and total_jobs == 0:
+        warning = 'No public job cards were returned. LinkedIn may require sign-in.'
     
     return jsonify({
         'success': True,
         'total_count': total_jobs,
         'by_site': {site: len(jobs) for site, jobs in current_jobs.items()},
-        'jobs': current_jobs
+        'jobs': current_jobs,
+        'search_url': build_linkedin_search_url(role, location),
+        'warning': warning,
     })
 
 @app.route('/apply', methods=['POST'])
@@ -103,12 +110,23 @@ def apply_jobs():
 def record_application():
     """Record an application only after the user confirms manual submission."""
     job_url = request.form.get('url', '').strip()
-    job = next(
-        (job for jobs in current_jobs.values() for job in jobs if job.get('url') == job_url),
-        None,
-    )
-    if not job:
-        return jsonify({'success': False, 'message': 'Choose a job from the current search.'}), 400
+    parsed_url = urlparse(job_url)
+    hostname = (parsed_url.hostname or '').lower()
+    if not (
+        parsed_url.scheme == 'https'
+        and (hostname == 'linkedin.com' or hostname.endswith('.linkedin.com'))
+        and parsed_url.path.startswith('/jobs/view/')
+    ):
+        return jsonify({'success': False, 'message': 'A valid LinkedIn job URL is required.'}), 400
+
+    job = {
+        'title': request.form.get('title', '').strip()[:200],
+        'company': request.form.get('company', '').strip()[:200],
+        'location': request.form.get('location', '').strip()[:200],
+        'url': job_url,
+    }
+    if not job['title'] or not job['company']:
+        return jsonify({'success': False, 'message': 'Job title and company are required.'}), 400
     ApplicationLogger().log_application(job, 'Applied', 'Manual confirmation')
     return jsonify({'success': True, 'message': 'Application recorded.'})
 
@@ -155,9 +173,9 @@ def upload_file():
         # Update config with new file path
         config = load_user_config()
         if file_type == 'cv':
-            config['cv_path'] = str(filepath.relative_to(BASE_DIR))
+            config['cv_path'] = str(filepath)
         else:
-            config['cover_letter_path'] = str(filepath.relative_to(BASE_DIR))
+            config['cover_letter_path'] = str(filepath)
 
         save_user_config(config)
         
@@ -171,7 +189,7 @@ def applications():
     logger = ApplicationLogger()
     apps = []
     
-    csv_path = LOGGER_BASE_DIR / 'Applications.csv'
+    csv_path = APPLICATIONS_FILE
     if csv_path.exists():
         import csv
         with csv_path.open('r', encoding='utf-8', newline='') as f:

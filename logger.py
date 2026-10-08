@@ -9,11 +9,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict
 
-BASE_DIR = Path(__file__).resolve().parent
+from config import DATA_DIR
+
+APPLICATIONS_FILE = DATA_DIR / "Applications.csv"
 
 class ApplicationLogger:
-    def __init__(self, csv_file: str | os.PathLike = BASE_DIR / "Applications.csv"):
-        self.csv_file = Path(csv_file)
+    def __init__(self, csv_file: str | os.PathLike | None = None):
+        self.csv_file = Path(csv_file) if csv_file is not None else APPLICATIONS_FILE
         self._ensure_csv_exists()
     
     def _ensure_csv_exists(self):

@@ -71,7 +71,7 @@ Edit `config.json` to customize:
 ## Data Privacy
 
 - LinkedIn passwords are neither requested nor stored
-- All data remains local on your machine
+- Local runs keep data on your machine
 - Applications logged in `Applications.csv`
 
 ## Ethics & Compliance
@@ -86,6 +86,7 @@ Edit `config.json` to customize:
 - LinkedIn can change its page markup or require sign-in, which may prevent results from loading.
 - Naukri and Monster were previously shown in the UI but had no implementation; they are disabled until real provider modules exist.
 - Automatic form submission is intentionally disabled. The old placeholder returned success without submitting anything, so it was unsafe to use for application tracking.
+- Vercel functions use writable `/tmp` storage. Settings, uploaded files, and application history there are ephemeral and can disappear whenever an instance is recycled. Configure durable external storage before relying on hosted tracking.
 
 ## Tests
 

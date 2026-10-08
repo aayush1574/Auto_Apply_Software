@@ -1,74 +1,83 @@
-"""
-LinkedIn Job Search Module
-Handles job searching and filtering on LinkedIn.
-"""
+"""Serverless-compatible LinkedIn public job search."""
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
 from typing import Dict, List
 from urllib.parse import urlencode
-import time
+
+import requests
+from bs4 import BeautifulSoup
+
+PUBLIC_SEARCH_URL = "https://www.linkedin.com/jobs/search/"
+GUEST_SEARCH_URL = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
+DEFAULT_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36"
+    ),
+}
+
+
+def build_linkedin_search_url(role: str, location: str) -> str:
+    """Build a user-facing LinkedIn Easy Apply search URL."""
+    params = urlencode({"keywords": role, "location": location, "f_AL": "true"})
+    return f"{PUBLIC_SEARCH_URL}?{params}"
 
 class LinkedInJobSearch:
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, session=None):
         self.config = config
-        self.driver = None
-        
-    def _init_driver(self):
-        """Initialize Chrome driver with options"""
-        if not self.driver:
-            options = webdriver.ChromeOptions()
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            options.page_load_strategy = "eager"
-            self.driver = webdriver.Chrome(options=options)
+        self.session = session or requests.Session()
+        self.last_error = None
     
     def search_jobs(self, role: str, location: str) -> List[Dict]:
-        """Search for Easy Apply jobs"""
-        self._init_driver()
-        
-        # Build LinkedIn job search URL
-        base_url = "https://www.linkedin.com/jobs/search/"
-        params = urlencode({"keywords": role, "location": location, "f_AL": "true"})
-
-        self.driver.get(f"{base_url}?{params}")
-        time.sleep(3)
-        
-        jobs = []
+        """Return up to 20 public Easy Apply listings without a browser driver."""
+        self.last_error = None
         try:
-            # Find job cards
-            job_cards = self.driver.find_elements(By.CSS_SELECTOR, "[data-job-id]")
-            
-            for card in job_cards[:20]:  # Limit to first 20 results
-                try:
-                    job_id = card.get_attribute("data-job-id")
-                    title = card.find_element(By.CSS_SELECTOR, "h3 a").text
-                    company = card.find_element(By.CSS_SELECTOR, "h4 a").text
-                    location_elem = card.find_element(By.CSS_SELECTOR, "[data-test-job-location]")
-                    job_location = location_elem.text if location_elem else location
-                    
-                    # Check if Easy Apply is available
-                    easy_apply = len(card.find_elements(By.XPATH, ".//span[contains(text(), 'Easy Apply')]")) > 0
-                    
-                    if easy_apply:
-                        jobs.append({
-                            "id": job_id,
-                            "title": title,
-                            "company": company,
-                            "location": job_location,
-                            "url": f"https://www.linkedin.com/jobs/view/{job_id}",
-                            "easy_apply": True
-                        })
-                except Exception:
-                    continue
-                    
-        except Exception as exc:
-            print(f"Error searching jobs: {exc}")
-        
+            response = self.session.get(
+                GUEST_SEARCH_URL,
+                params={
+                    "keywords": role,
+                    "location": location,
+                    "f_AL": "true",
+                    "start": 0,
+                },
+                headers=DEFAULT_HEADERS,
+                timeout=12,
+            )
+            response.raise_for_status()
+            response.encoding = "utf-8"
+        except requests.RequestException as exc:
+            self.last_error = f"LinkedIn did not return public results: {exc}"
+            return []
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        jobs = []
+        seen_ids = set()
+        for card in soup.select("div.base-search-card"):
+            entity_urn = card.get("data-entity-urn", "")
+            job_id = entity_urn.rsplit(":", 1)[-1]
+            title = card.select_one(".base-search-card__title")
+            company = card.select_one(".base-search-card__subtitle")
+            job_location = card.select_one(".job-search-card__location")
+            link = card.select_one("a.base-card__full-link")
+            if not job_id.isdigit() or job_id in seen_ids or not all((title, company, link)):
+                continue
+
+            seen_ids.add(job_id)
+            jobs.append({
+                "id": job_id,
+                "title": title.get_text(" ", strip=True),
+                "company": company.get_text(" ", strip=True),
+                "location": (
+                    job_location.get_text(" ", strip=True) if job_location else location
+                ),
+                "url": f"https://www.linkedin.com/jobs/view/{job_id}",
+                "easy_apply": True,
+            })
+            if len(jobs) == 20:
+                break
+
         return jobs
     
     def close(self):
-        """Close the browser driver"""
-        if self.driver:
-            self.driver.quit()
-            self.driver = None
+        """Close the reusable HTTP session."""
+        self.session.close()
